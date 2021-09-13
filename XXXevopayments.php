@@ -40,27 +40,27 @@ class BOIPA extends PaymentModule
      * begin - switching constants which will be used to hide or show the UI controls 
      * 
      ***/
-    const ST_SHOW_IFRAME = "1";
-    const ST_SHOW_REDIRECT = "1";
-    const ST_SHOW_HOSTEDPAY = "1";
+    const ST_SHOW_IFRAME = "{[$integration_show_iframe]}";
+    const ST_SHOW_REDIRECT = "{[$integration_show_redirect]}";
+    const ST_SHOW_HOSTEDPAY = "{[$integration_show_hostedpay]}";
     
-    const ST_SHOW_SANDBOX_FIELDS = "0";
-    const ST_SHOW_LIVE_FIELDS = "0";
+    const ST_SHOW_SANDBOX_FIELDS = "{[$showUrlFields4Sandbox]}";
+    const ST_SHOW_LIVE_FIELDS = "{[$showUrlFields4Live]}";
     
-    const ST_EVO_CASHIER_URL_SANDBOX = "https://cashierui-apiuat.test.boipapaymentgateway.com/ui/cashier";
-    const ST_EVO_JAVASCRIPT_URL_SANDBOX = "https://cashierui-apiuat.test.boipapaymentgateway.com/js/api.js";
-    const ST_EVO_TOKEN_URL_SANDBOX = "https://apiuat.test.boipapaymentgateway.com/token";
-    const ST_EVO_PAYMENT_URL_SANDBOX = "https://apiuat.test.boipapaymentgateway.com/payments";
+    const ST_EVO_CASHIER_URL_SANDBOX = "{[$url_sandbox_cashier]}";
+    const ST_EVO_JAVASCRIPT_URL_SANDBOX = "{[$url_sandbox_js]}";
+    const ST_EVO_TOKEN_URL_SANDBOX = "{[$url_sandbox_token]}";
+    const ST_EVO_PAYMENT_URL_SANDBOX = "{[$url_sandbox_payment]}";
    
-    const ST_EVO_CASHIER_URL_LIVE = "https://cashierui-api.boipapaymentgateway.com/ui/cashier";
-    const ST_EVO_JAVASCRIPT_URL_LIVE = "https://cashierui-api.boipapaymentgateway.com/js/api.js";
-    const ST_EVO_TOKEN_URL_LIVE = "https://api.boipapaymentgateway.com/token";
-    const ST_EVO_PAYMENT_URL_LIVE = "https://api.boipapaymentgateway.com/payments";
+    const ST_EVO_CASHIER_URL_LIVE = "{[$url_live_cashier]}";
+    const ST_EVO_JAVASCRIPT_URL_LIVE = "{[$url_live_js]}";
+    const ST_EVO_TOKEN_URL_LIVE = "{[$url_live_token]}";
+    const ST_EVO_PAYMENT_URL_LIVE = "{[$url_live_payment]}";
     //DEFAULT TO IFRAME
     // 1 - IFRAME
     // 0 - REDIRECT
     // 2 - HOSTED PAY
-    const ST_EVO_PAYMENT_TYPE = "1";
+    const ST_EVO_PAYMENT_TYPE = "{[$integration_default_payment]}";
     /** end**/
 
 	private $payments = null;
@@ -1103,14 +1103,11 @@ class BOIPA extends PaymentModule
             if($brandId != ''){
                 $purchase -> brandId($brandId);
             }
-			$langCode = $this->context->language->iso_code;
-			if($langCode == 'mx'){
-			  $langCode = 'es-MX';
-			}
+
             $purchase->channel(Payments\Payments::CHANNEL_ECOM)->
             userDevice(Payments\Payments::USER_DEVICE_DESKTOP)->
             merchantTxId($merchantTxId)->
-            language($langCode)->
+            language($this->context->language->iso_code)->
             amount($amount)->
             country($merchantCountryIsoCode)->
             currency($merchantCurrencyCode)->
@@ -1126,6 +1123,7 @@ class BOIPA extends PaymentModule
             userAgent($userAgent)->
             customerIPAddress($customerIPAddress)->
             customerAddressHouseName($customerAddressStreet)->
+            customerAddressState($customerAddressState)->
             customerEmail($customerEmail)->
             customerPhone($customerPhone);
 			

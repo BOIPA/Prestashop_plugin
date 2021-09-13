@@ -1,8 +1,8 @@
-# Virtuemart
+# Prestashop
 [![GitHub license](https://img.shields.io/github/license/BOIPA/Prestashop_plugin)](https://github.com/BOIPA/Prestashop_plugin/blob/master/LICENSE) 
 ![Version](https://img.shields.io/badge/version-1.1.0-informational)
 
-This plugin is provided for BOIPA merchants using Virtuemart.
+This plugin is provided for BOIPA merchants using Prestashop.
 
 
 Got a question? 

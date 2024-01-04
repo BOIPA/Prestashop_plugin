@@ -20,9 +20,9 @@ class BOIPAResponseModuleFrontController extends ModuleFrontController
     {
         $this->ssl = true;
         $this->boipa = new BOIPA();
+		//it's safe to use MD5 here
         $this->merchantCode = substr(md5(uniqid(mt_rand(), true)), 0, 20);
         $this->mapStatuses = BOIPA::MAP_STATUSES;
-//        PrestaShopLogger::addLog( 'EvoPaymentsResponseModuleFrontController?POSTPROCESS?'. json_encode( $_REQUEST));
     }
 
    public function initContent()

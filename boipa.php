@@ -62,6 +62,7 @@ class BOIPA extends PaymentModule
     // 2 - HOSTED PAY
     const ST_EVO_PAYMENT_TYPE = "1";
     /** end**/
+    const PS_VERSION_EIGHT = '8.0.0';
 
 	private $payments = null;
     
@@ -70,12 +71,12 @@ class BOIPA extends PaymentModule
         $this->name = 'boipa';
         $this->displayName = 'BOIPA';
         $this->tab = 'payments_gateways';
-        $this->version = '1.1.0';
+        $this->version = '1.3.0';
         $this->author = 'BOIPA';
         $this->need_instance = 1;
         $this->bootstrap = true;
         $this->ssl=true;
-        $this->ps_versions_compliancy = ['min' => '1.6.0', 'max' => '1.7'];
+        $this->ps_versions_compliancy = ['min' => '1.6.0', 'max' => _PS_VERSION_];
 
         $this->currencies = true;
         $this->currencies_mode = 'checkbox';
@@ -148,14 +149,6 @@ class BOIPA extends PaymentModule
             !Configuration::deleteByName('EVO_PAYMENT_TYPE') ||
             !Configuration::deleteByName('EVO_REFUND_POSSIBILITY') ||
             
-			/*
-            !Configuration::deleteByName('EVO_STATUS_SUCCESS') ||
-            !Configuration::deleteByName('EVO_STATUS_ERROR') ||
-            !Configuration::deleteByName('EVO_STATUS_CANCELED') ||
-            !Configuration::deleteByName('EVO_STATUS_INPROGRESS') ||
-            !Configuration::deleteByName('EVO_STATUS_REFUNDED') ||
-			*/
-            
             !Configuration::deleteByName('EVO_CASHIER_URL_SANDBOX') ||
             !Configuration::deleteByName('EVO_JAVASCRIPT_URL_SANDBOX') ||
             !Configuration::deleteByName('EVO_TOKEN_URL_SANDBOX') ||
@@ -175,7 +168,7 @@ class BOIPA extends PaymentModule
     {
         $hooks =
             $this->registerHook('adminOrder') &&
-            $this->registerHook('paymentReturn') &&
+			$this->registerHook('actionOrderSlipAdd') &&
             $this->registerHook('header');
 
         if (version_compare(_PS_VERSION_, '1.7', 'lt')) {
@@ -676,7 +669,6 @@ class BOIPA extends PaymentModule
         $return = '';
 
         $langCode = $this->context->language->iso_code;
-//         $langCode = (new Language($order->id_lang)) -> iso_code;
 
         if (Configuration::get('EVO_REFUND_POSSIBILITY') && $order->module == 'boipa') {
             $lastStatus = 0;
@@ -747,7 +739,6 @@ class BOIPA extends PaymentModule
         $possibleToRefundRaw = $order->total_paid + $sum;
         $currency = new Currency($order->id_currency);
 
-        //var_dump($possibleToRefund);
         $refundAmount = (double)$refundAmountRaw ;
         $refundAmount = Tools::convertPrice($refundAmount , $currency, false);
         $refundAmount = Tools::ps_round((float)$refundAmount ,2);
@@ -763,12 +754,10 @@ class BOIPA extends PaymentModule
         
         $refund = $this->postRefund($tokenEvo, $order, $refundAmount);
         if(!$refund->errors){
-            //             $token = $refund->originalMerchantTxId;
             //refund transaction id in payment gateway
             $refundTxId = $refund->merchantTxId;
             $currency = new Currency($order->id_currency);
             $id_evo_payment = $this->addOrderPaymentToDB($order->id_cart, $refundTxId, $status='refunded', '-'.$refundAmountRaw, $order->id, $refundAmountRaw.$currency->iso_code);
-            //$order->addOrderPayment('-'.$refundAmount, 'BOIPA', $id_evo_payment, $currency, date('Y-m-d H:i:s'));
             $this->updateOrderStatus((int)Configuration::get(self::MAP_STATUSES['refunded']), $order);
             return ['redirect' => '1'];
         } else {
@@ -1023,7 +1012,7 @@ class BOIPA extends PaymentModule
     /**
      * @return array
      */
-    public function getPaymentToken($merchantTxId, $retry='', $mode, $amount='')
+    public function getPaymentToken($merchantTxId, $retry, $mode, $amount='')
     {
         if($amount===''){
             $amount = $this->context->cart->getOrderTotal(true);
@@ -1068,7 +1057,7 @@ class BOIPA extends PaymentModule
             $payments = $this->payments;
             $purchase = $payments->purchase();
 
-            $customerIPAddress = isset($_SERVER['HTTP_CLIENT_IP']) ? $_SERVER['HTTP_CLIENT_IP'] : isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? trim(current(explode(",", $_SERVER['HTTP_X_FORWARDED_FOR']))) : $_SERVER['REMOTE_ADDR'];
+            $customerIPAddress = isset($_SERVER['HTTP_CLIENT_IP']) ? $_SERVER['HTTP_CLIENT_IP'] : (isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? trim(current(explode(",", $_SERVER['HTTP_X_FORWARDED_FOR']))) : $_SERVER['REMOTE_ADDR']);
             $userAgent = $_SERVER['HTTP_USER_AGENT'];
             $merchantChallengeInd = '01';
             $merchantDecReqInd = 'N';
@@ -1339,4 +1328,38 @@ class BOIPA extends PaymentModule
         
         return $candidate[$lang];
     }
+	
+	public function hookActionOrderSlipAdd( $params ) {
+		if ( version_compare(_PS_VERSION_, SELF::PS_VERSION_EIGHT, '>=') && Configuration::get('EVO_REFUND_POSSIBILITY') && isset($params['order']) && ($params['order']->module === $this->name) ){
+			$order = $params['order'];
+			$customer = $order->getCustomer();
+			
+			$slips = OrderSlip::getOrdersSlip($customer->id, $order->id);
+			$current_order_slip = $slips[0];
+			$refund_amount = $current_order_slip['amount'] + $current_order_slip['shipping_cost_amount'] ;
+			
+			$order_payment = $this->getOrdersByIdOrder($order->id);
+			if ($order_payment) {
+				foreach ($order_payment as &$item) {
+					if ($item['status'] == 'success') {
+						$this->postRefund($item['token'], $order, $refund_amount);
+						break;
+					}
+				}
+			}
+			
+			$max_refundable_amount = $order->total_paid_real;
+			foreach ($slips as $slip) {
+				$max_refundable_amount -= $slip['amount'];
+				$max_refundable_amount -= $slip['shipping_cost_amount'];
+			}
+			$max_refundable_amount = number_format($max_refundable_amount, 2, '.', '');
+			//if the refundable is 0.00, then change order status.
+			if( (string) $max_refundable_amount  === '0.00' ) {
+				$this->updateOrderStatus((int)Configuration::get(self::MAP_STATUSES['refunded']), $order);
+			}
+			
+		}
+		
+	}
 }

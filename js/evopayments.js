@@ -57,10 +57,7 @@ function submitStandalone() {
         data: "typerequest=redirect_payment&merchantTxId=" + evomodule['evotoken'] + "&cart=" + evomodule['cartId'] ,
         cache: false,
         success: function (data) {
-        	console.log(data);
-        	console.log(data === 1);
         	if(data == 1){
-        		console.log('dd');
         		$('#submitpayment').submit();
         	}else{
         		alert('Problem with status payment!');

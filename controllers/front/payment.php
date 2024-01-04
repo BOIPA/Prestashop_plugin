@@ -26,12 +26,12 @@ class BOIPAPaymentModuleFrontController extends ModuleFrontController
         $this->ssl = true;
         $this->boipa = new BOIPA();
         $this->boipa->initEVOConfig();
+		//it's safe to use MD5 here
         $this->merchantCode = substr(md5(uniqid(mt_rand(), true)), 0, 20);
         $this->url = Payments\Config::$BaseUrl;
         $this->mapStatuses = BOIPA::MAP_STATUSES;
         $this->merchantId = Payments\Config::$MerchantId;
         $this->jsUrl = Payments\Config::$JavaScriptUrl;        
-//        PrestaShopLogger::addLog( 'BOIPAPaymentModuleFrontController - 1 POSTPROCESS'. json_encode( $_REQUEST));
     }
 
     public function initContent()

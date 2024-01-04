@@ -115,6 +115,7 @@ class BOIPASuccessModuleFrontController extends ModuleFrontController
             $params['currencyObj'] = $currency;
             $params['currency'] = $currency->sign;
             $params['total_to_pay'] = $this->order->getOrdersTotalPaid();
+			$params['order'] = $this->order;
 
             return $params;
         }
